@@ -19,18 +19,17 @@ class Job {
     static async create({ title, salary, equity, company_handle }) {
         const duplicateCheck = await db.query(
             `SELECT title
-           FROM jobs
-           WHERE title = $1`,
-            [title]);
+             FROM jobs
+             WHERE title = $1`, [title]);
 
         if (duplicateCheck.rows[0])
             throw new BadRequestError(`Duplicate job: ${title}`);
 
         const result = await db.query(
             `INSERT INTO jobs
-           (title, salary, equity, company_handle)
-           VALUES ($1, $2, $3, $4)
-           RETURNING id, title, salary, equity, company_handle AS "companyHandle"`,
+             (title, salary, equity, company_handle)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id, title, salary, equity, company_handle AS "companyHandle"`,
             [
                 title,
                 salary,
@@ -70,7 +69,6 @@ class Job {
 
         if (hasEquity === true) {
             query += `${title || minSalary ? ' AND' : ' WHERE'} equity > 0`;
-            values.push(hasEquity);
         }
 
         query += " ORDER BY title";
