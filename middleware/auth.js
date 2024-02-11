@@ -42,8 +42,21 @@ function ensureLoggedIn(req, res, next) {
   }
 }
 
+function ensureAdmin(req, res, next) {
+  try {
+    const { user } = res.locals;
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ error: "Unauthorized, admin privileges required" });
+    }
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+}
+
 
 module.exports = {
   authenticateJWT,
   ensureLoggedIn,
+  ensureAdmin
 };
