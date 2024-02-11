@@ -46,7 +46,7 @@ function ensureAdmin(req, res, next) {
   try {
     const { user } = res.locals;
     if (!user || !user.isAdmin) {
-      return res.status(403).json({ error: "Unauthorized, admin privileges required" });
+      throw new UnauthorizedError();
     }
     return next();
   } catch (err) {
