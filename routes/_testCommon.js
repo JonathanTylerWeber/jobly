@@ -9,7 +9,6 @@ const { createToken } = require("../helpers/tokens");
 async function commonBeforeAll() {
   // noinspection SqlWithoutWhere
   await db.query("DELETE FROM users");
-  // noinspection SqlWithoutWhere
   await db.query("DELETE FROM companies");
   await db.query("DELETE FROM jobs");
 
@@ -90,6 +89,9 @@ async function commonAfterEach() {
 }
 
 async function commonAfterAll() {
+  await db.query("DELETE FROM users");
+  await db.query("DELETE FROM companies");
+  await db.query("DELETE FROM jobs");
   await db.end();
 }
 
