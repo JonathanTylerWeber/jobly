@@ -14,7 +14,33 @@ const {
   commonAfterAll,
 } = require("./_testCommon");
 
-beforeAll(commonBeforeAll);
+let jobId1;
+let jobId2;
+
+beforeAll(async () => {
+  await commonBeforeAll();
+
+  // Create two new jobs
+  const job1Res = await db.query(
+    `INSERT INTO jobs (title, salary, equity, company_handle)
+    VALUES ('Software Engineer', 100000, 0.05, 'c1')
+    RETURNING id`
+  );
+  jobId1 = job1Res.rows[0].id;
+
+  const job2Res = await db.query(
+    `INSERT INTO jobs (title, salary, equity, company_handle)
+    VALUES ('Data Scientist', 90000, 0.02, 'c2')
+    RETURNING id`
+  );
+  jobId2 = job2Res.rows[0].id;
+
+  // Apply job2 for user u1
+  await db.query(
+    `INSERT INTO applications (username, job_id)
+    VALUES ('u1', $1)`, [jobId2]
+  );
+});
 beforeEach(commonBeforeEach);
 afterEach(commonAfterEach);
 afterAll(commonAfterAll);
@@ -140,6 +166,7 @@ describe("get", function () {
       lastName: "U1L",
       email: "u1@email.com",
       isAdmin: false,
+      jobs: expect.any(Array)
     });
   });
 
@@ -215,7 +242,7 @@ describe("remove", function () {
   test("works", async function () {
     await User.remove("u1");
     const res = await db.query(
-        "SELECT * FROM users WHERE username='u1'");
+      "SELECT * FROM users WHERE username='u1'");
     expect(res.rows.length).toEqual(0);
   });
 
@@ -225,6 +252,50 @@ describe("remove", function () {
       fail();
     } catch (err) {
       expect(err instanceof NotFoundError).toBeTruthy();
+    }
+  });
+});
+
+
+/************************************** applyForJob */
+
+describe("applyForJob", function () {
+  test("works", async function () {
+    const username = "u1";
+    const result = await User.applyForJob(username, jobId1);
+    expect(result).toEqual({ applied: jobId1 });
+  });
+
+  test("throws NotFoundError if user does not exist", async function () {
+    const username = "nonexistentUser";
+    try {
+      await User.applyForJob(username, jobId1);
+      fail();
+    } catch (err) {
+      expect(err instanceof NotFoundError).toBeTruthy();
+      expect(err.message).toEqual(`User not found: ${username}`);
+    }
+  });
+
+  test("throws NotFoundError if job does not exist", async function () {
+    const username = "u1";
+    try {
+      await User.applyForJob(username, 999);
+      fail();
+    } catch (err) {
+      expect(err instanceof NotFoundError).toBeTruthy();
+      expect(err.message).toEqual(`Job not found: 999`);
+    }
+  });
+
+  test("throws BadRequestError if user has already applied for the job", async function () {
+    const username = "u1";
+    try {
+      await User.applyForJob(username, jobId2);
+      fail();
+    } catch (err) {
+      expect(err instanceof BadRequestError).toBeTruthy();
+      expect(err.message).toEqual(`User ${username} has already applied for job ${jobId2}`);
     }
   });
 });

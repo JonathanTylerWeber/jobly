@@ -44,6 +44,35 @@ router.post("/", ensureAdmin, async function (req, res, next) {
 });
 
 
+
+// POST / [username] / jobs / [job_id] => { applied: jobId }
+// 
+// Allows user to create a job application for themselves, or an admin can create it for them
+// 
+// Authorization required: admin or user with same username
+
+router.post("/:username/jobs/:id", ensureLoggedIn, async function (req, res, next) {
+  try {
+    if (res.locals.user.isAdmin || res.locals.user.username === req.params.username) {
+      return next();
+    } else {
+      throw new UnauthorizedError();
+    }
+  } catch (err) {
+    return next(err); // Pass the error to the error handling middleware
+  }
+}, async function (req, res, next) {
+  try {
+    const { username, id } = req.params;
+    const { applied } = await User.applyForJob(username, id);
+    return res.json({ applied });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+
+
 /** GET / => { users: [ {username, firstName, lastName, email }, ... ] }
  *
  * Returns list of all users.
