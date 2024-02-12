@@ -12,12 +12,96 @@ const {
   commonAfterEach,
   commonAfterAll,
   u1Token,
+  u2Token
 } = require("./_testCommon");
 
-beforeAll(commonBeforeAll);
+let jobId1;
+let jobId2;
+
+beforeAll(async () => {
+  await commonBeforeAll();
+
+  // Create two new jobs
+  const job1Res = await db.query(
+    `INSERT INTO jobs (title, salary, equity, company_handle)
+    VALUES ('Software Engineer', 100000, 0.05, 'c1')
+    RETURNING id`
+  );
+  jobId1 = job1Res.rows[0].id;
+
+  const job2Res = await db.query(
+    `INSERT INTO jobs (title, salary, equity, company_handle)
+    VALUES ('Data Scientist', 90000, 0.02, 'c2')
+    RETURNING id`
+  );
+  jobId2 = job2Res.rows[0].id;
+
+  // Apply job2 for user u1
+  await db.query(
+    `INSERT INTO applications (username, job_id)
+    VALUES ('u1', $1)`, [jobId2]
+  );
+});
 beforeEach(commonBeforeEach);
 afterEach(commonAfterEach);
 afterAll(commonAfterAll);
+
+/************************************** POST /users/[username]/jobs/[jobId] */
+
+describe("POST /users/:username/jobs/:id", () => {
+  test("works for admin adding job application", async () => {
+    const resp = await request(app)
+      .post(`/users/u1/jobs/${jobId1}`)
+      .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.statusCode).toEqual(200);
+    expect(resp.body).toEqual({ applied: `${jobId1}` });
+  });
+
+  test("works for user adding job application to themselves", async () => {
+    const resp = await request(app)
+      .post(`/users/u2/jobs/${jobId2}`)
+      .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(200);
+    expect(resp.body).toEqual({ applied: `${jobId2}` });
+  });
+
+  test("unauthorized for user adding job application to another user", async () => {
+    const resp = await request(app)
+      .post(`/users/u1/jobs/${jobId2}`)
+      .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(401);
+  });
+
+  test("unauthorized for anon user", async () => {
+    const resp = await request(app)
+      .post(`/users/u1/jobs/${jobId2}`);
+    expect(resp.statusCode).toEqual(401);
+  });
+
+  test("responds with 404 for non-existent user", async () => {
+    const resp = await request(app)
+      .post(`/users/notauser/jobs/${jobId2}`)
+      .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.statusCode).toEqual(404);
+  });
+
+  test("responds with 404 for non-existent job", async () => {
+    const resp = await request(app)
+      .post("/users/u1/jobs/999")
+      .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.statusCode).toEqual(404);
+  });
+
+  test("responds with 400 if user has already applied for the job", async () => {
+    const resp = await request(app)
+      .post(`/users/u1/jobs/${jobId2}`)
+      .set("authorization", `Bearer ${u1Token}`);
+    expect(resp.statusCode).toEqual(400);
+    expect(resp.body).toEqual({ error: { message: `User u1 has already applied for job ${jobId2}`, status: 400 } });
+  });
+});
+
+
 
 /************************************** POST /users */
 
