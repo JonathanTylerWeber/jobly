@@ -51,7 +51,7 @@ class Job {
         let query = `SELECT id,
                         title, 
                         salary, 
-                        equity, 
+                        CAST(equity AS NUMERIC) AS equity, 
                         company_handle AS "companyHandle"
                  FROM jobs`;
 
@@ -68,7 +68,8 @@ class Job {
         }
 
         if (hasEquity === true) {
-            query += `${title || minSalary ? ' AND' : ' WHERE'} equity > 0`;
+            query += `${title || minSalary ? ' AND' : ' WHERE'} 
+            (equity IS NOT NULL AND equity > 0)`;
         }
 
         query += " ORDER BY title";
