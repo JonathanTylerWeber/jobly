@@ -67,7 +67,7 @@ class Job {
             values.push(minSalary);
         }
 
-        if (hasEquity === true) {
+        if (hasEquity === 'true') {
             query += `${title || minSalary ? ' AND' : ' WHERE'} 
             (equity IS NOT NULL AND equity > 0)`;
         }
