@@ -72,6 +72,11 @@ class Job {
             (equity IS NOT NULL AND equity > 0)`;
         }
 
+        if (hasEquity === 'false') {
+            query += `${title || minSalary ? ' AND' : ' WHERE'} 
+            (equity IS NULL OR equity = 0)`;
+        }
+
         query += " ORDER BY title";
 
         const jobsRes = await db.query(query, values);
